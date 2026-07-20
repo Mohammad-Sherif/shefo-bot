@@ -309,6 +309,10 @@ def main():
     app.add_handler(CommandHandler("adhkar", adhkar_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
+    # Start keep_alive server for free hosting
+    from keep_alive import keep_alive
+    keep_alive()
+    
     # Run
     print("\n✅ البوت شغّال! ابعت /start على تليجرام")
     print("Press Ctrl+C to stop\n")
