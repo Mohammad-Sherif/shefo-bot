@@ -11,6 +11,12 @@ if sys.platform == 'win32':
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
 
+import time
+# Set timezone to Egypt (Cairo)
+os.environ['TZ'] = 'Africa/Cairo'
+if hasattr(time, 'tzset'):
+    time.tzset()
+
 import logging
 import re
 from datetime import datetime, date
