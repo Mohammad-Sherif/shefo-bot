@@ -139,13 +139,7 @@ class PrayerManager:
 
         # Find which prayer they're responding to
         if not prayer_name:
-            # Get the most recent unprayed prayer
-            pending = self.db.get_current_pending_prayer(today_str)
-            if pending:
-                prayer_name = pending['prayer_name']
-            else:
-                # Default to most recent prayer
-                prayer_name = self._get_most_recent_prayer()
+            prayer_name = self._get_most_recent_prayer()
 
         if not prayer_name:
             return "ما شاء الله عليك! ربنا يتقبل 🤲"

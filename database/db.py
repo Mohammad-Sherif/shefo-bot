@@ -178,7 +178,7 @@ class Database:
     def get_current_pending_prayer(self, prayer_date: str) -> dict:
         """Get the most recent unprayed prayer"""
         row = self.conn.execute(
-            'SELECT * FROM prayers WHERE date = ? AND prayed = 0 ORDER BY id DESC LIMIT 1',
+            'SELECT * FROM prayers WHERE date = ? AND prayed = 0 ORDER BY id ASC LIMIT 1',
             (prayer_date,)
         ).fetchone()
         return dict(row) if row else None
