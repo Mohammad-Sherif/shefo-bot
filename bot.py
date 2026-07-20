@@ -218,7 +218,7 @@ async def adhkar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # === Message Handler ===
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle all text messages"""
+    """Handle all text messages — AI decides everything"""
     if not update.message or not update.message.text:
         return
     
@@ -229,58 +229,62 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not db.get_chat_id():
         db.save_chat_id(str(chat_id))
     
-    # Detect intent
-    intent = detect_intent(text)
-    logger.info(f"Message: '{text[:50]}...' | Intent: {intent}")
+    logger.info(f"Message: '{text[:50]}'")
     
-    response = ""
+    # Send EVERYTHING to the AI — it decides what to do
+    response = await ai_engine.chat(text)
     
-    if intent == 'prayed':
-        response = await prayer_manager.handle_prayed()
-    
-    elif intent == 'food_log':
-        response = await fitness_manager.process_food_log(text)
-    
-    elif intent == 'today_plan':
-        response = await fitness_manager.get_workout_recommendation()
-    
-    elif intent == 'random_workout':
-        workout_text = await fitness_manager.get_random_workout()
-        response = f"🎲 يلا! جبتلك تمرين عشوائي:\n\n{workout_text}"
-    
-    elif intent == 'workout_done':
-        response = fitness_manager.mark_workout_complete()
-    
-    elif intent == 'modify_plan':
-        response = await fitness_manager.modify_plan(text)
-    
-    elif intent == 'prayer_status':
-        response = prayer_manager.get_prayer_status_text()
-    
-    elif intent == 'morning':
-        # Check if Fajr was prayed
-        today_str = date.today().isoformat()
-        fajr_status = db.get_prayer_status(today_str, 'Fajr')
-        prayed_fajr = fajr_status and fajr_status.get('prayed', False) if fajr_status else False
-        
-        day_name = datetime.now().strftime('%A')
-        plan = format_plan_for_ai(day_name)
-        
-        response = await ai_engine.generate_morning_greeting(
-            prayed_fajr=prayed_fajr,
-            today_plan=plan
-        )
-    
-    elif intent == 'goodnight':
-        # Send daily report before sleep
-        response = await ai_engine.chat(text)
-    
-    else:
-        # General chat - send to AI
-        response = await ai_engine.chat(text)
+    # Parse and execute any [ACTION:XXX] tags
+    response = await _execute_actions(response, text)
     
     if response:
         await update.message.reply_text(response)
+
+
+async def _execute_actions(response: str, original_text: str) -> str:
+    """Parse [ACTION:XXX] tags from AI response, execute DB actions, return clean text."""
+    clean = response
+
+    if '[ACTION:PRAYED]' in clean:
+        clean = clean.replace('[ACTION:PRAYED]', '').strip()
+        today_str = date.today().isoformat()
+        # Find most recent prayer based on time
+        now = datetime.now()
+        prayers = db.get_today_prayers(today_str)
+        prayer_name = None
+        if prayers:
+            for p in reversed(prayers):
+                time_str = p.get('adhan_time', '')
+                if time_str:
+                    h, m = map(int, time_str.split(':'))
+                    pt = now.replace(hour=h, minute=m, second=0)
+                    if pt <= now:
+                        prayer_name = p['prayer_name']
+                        break
+        if prayer_name:
+            db.mark_prayed(today_str, prayer_name)
+            from data.adhkar import get_random_dhikr
+            used_ids = db.get_used_adhkar_today(today_str)
+            dhikr = get_random_dhikr(used_ids)
+            if dhikr:
+                db.log_dhikr(today_str, prayer_name, dhikr['id'], dhikr['text'])
+                clean += f"\n\n💎 {dhikr['text']}\n📖 {dhikr['source']}"
+
+    if '[ACTION:WORKOUT_DONE]' in clean:
+        clean = clean.replace('[ACTION:WORKOUT_DONE]', '').strip()
+        fitness_manager.mark_workout_complete()
+
+    if '[ACTION:RANDOM_WORKOUT]' in clean:
+        clean = clean.replace('[ACTION:RANDOM_WORKOUT]', '').strip()
+        wk = await fitness_manager.get_random_workout()
+        clean += f"\n\n{wk}"
+
+    if '[ACTION:FOOD]' in clean:
+        clean = clean.replace('[ACTION:FOOD]', '').strip()
+        today_str = date.today().isoformat()
+        db.log_meal(today_str, 'logged', original_text, 0, 0)
+
+    return clean
 
 # === Daily Reset ===
 async def daily_reset():

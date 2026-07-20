@@ -321,48 +321,46 @@ def webhook():
 # ============================================================
 
 def _handle_command(text: str, chat_id: int) -> str:
-    """Handle slash commands."""
-    cmd = text.split()[0].lower().split('@')[0]  # strip @botname
+    """Handle slash commands — all responses come from the AI."""
+    cmd = text.split()[0].lower().split('@')[0]
 
     if cmd == '/start':
         db.save_chat_id(str(chat_id))
         ensure_today_prayers()
-        day_name = datetime.now().strftime('%A')
-        plan_text = format_plan_for_ai(day_name)
-        return (
-            "السلام عليكم يا محمد! 👋\n\n"
-            "أنا صاحبك — صديقك اللي هيفضل معاك على طول.\n"
-            "هذكّرك بالصلاة، وهتابع معاك التمارين والأكل، "
-            "وهسأل عليك من وقت للتاني 😊\n\n"
-            f"📋 خطة اليوم:\n{plan_text}\n\n"
-            "ابعتلي أي حاجة وأنا جاهز! 💪"
-        )
+        # Let the AI welcome the user naturally
+        response = run_async(ai_engine.chat(
+            "[نظام: محمد بدأ المحادثة لأول مرة. رحّب به، قوله خطة اليوم، وشجعه.]"
+        ))
+        return _execute_actions(response, '/start')
 
     elif cmd == '/prayers':
-        return get_prayer_status_text()
+        response = run_async(ai_engine.chat("اعرض لي حالة صلواتي النهاردة"))
+        return _execute_actions(response, '/prayers')
 
     elif cmd == '/plan':
-        return run_async(fitness_manager.get_workout_recommendation())
+        response = run_async(ai_engine.chat("إيه خطة تمريني النهاردة؟"))
+        return _execute_actions(response, '/plan')
 
     elif cmd == '/workout':
-        wk = run_async(fitness_manager.get_random_workout())
-        return f"🎲 تمرين عشوائي ليك:\n\n{wk}"
+        response = run_async(ai_engine.chat("اديني تمرينة عشوائية"))
+        return _execute_actions(response, '/workout')
 
     elif cmd == '/stats':
         today_str = date.today().isoformat()
         score = db.update_daily_score(today_str)
         streak = db.get_prayer_streak()
         macros = db.get_total_macros(today_str)
-        return (
-            "📊 إحصائياتك:\n\n"
-            f"🕌 الصلوات: {score['prayers_done']}/5\n"
-            f"💪 التمرين: {'تم ✅' if score['workout_done'] else 'لم يتم ❌'}\n"
-            f"🍽️ الوجبات: {score['meals_logged']}\n"
-            f"🔥 السعرات: {macros.get('total_kcal', 0)}/2450\n"
-            f"💪 البروتين: {macros.get('total_protein', 0)}/155g\n"
-            f"⭐ نقاط اليوم: {score['score']}\n"
-            f"🔥 سلسلة الصلاة: {streak} يوم"
+        stats_msg = (
+            f"اعرض لي إحصائياتي بشكل حلو: "
+            f"الصلوات {score['prayers_done']}/5، "
+            f"التمرين {'اتعمل' if score['workout_done'] else 'لسه'}، "
+            f"الوجبات {score['meals_logged']}، "
+            f"السعرات {macros.get('total_kcal', 0)}/2450، "
+            f"البروتين {macros.get('total_protein', 0)}/155g، "
+            f"النقاط {score['score']}، "
+            f"سلسلة الصلاة {streak} يوم"
         )
+        return run_async(ai_engine.chat(stats_msg))
 
     elif cmd == '/adhkar':
         hour = datetime.now().hour
