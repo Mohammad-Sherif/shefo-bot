@@ -64,6 +64,10 @@ class AIEngine:
         prayer_lines = []
         for p in prayers:
             name_ar = PRAYER_NAMES_AR.get(p['prayer_name'], p['prayer_name'])
+            
+            if p['prayer_name'] == "Fajr" and datetime.now().hour >= 7:
+                name_ar = "الصبح"
+                
             status = "صلّى ✅" if p['prayed'] else "لم يصلِّ ❌"
             prayer_lines.append(f"{name_ar}: {status}")
         prayer_context = "حالة الصلوات اليوم:\n" + "\n".join(prayer_lines) if prayer_lines else "لم تُسجَّل صلوات بعد"
@@ -135,7 +139,9 @@ class AIEngine:
     async def generate_prayer_reminder(self, prayer_name: str, reminder_number: int) -> str:
         """Generate a prayer reminder message"""
         prayer_ar = PRAYER_NAMES_AR.get(prayer_name, prayer_name)
-        
+        if prayer_name == "Fajr" and datetime.now().hour >= 7:
+            prayer_ar = "الصبح"
+            
         context = ""
         if reminder_number > 5:
             context = "تذكير متأخر جداً - عاتب بحنية أكثر"
@@ -156,9 +162,11 @@ class AIEngine:
         return self._call_groq(messages, temperature=0.95, max_tokens=150)
     
     async def generate_encouragement(self, prayer_name: str) -> str:
-        """Generate encouragement for praying"""
+        """Generate a short encouragement after praying"""
         prayer_ar = PRAYER_NAMES_AR.get(prayer_name, prayer_name)
-        
+        if prayer_name == "Fajr" and datetime.now().hour >= 7:
+            prayer_ar = "الصبح"
+            
         prompt = ENCOURAGEMENT_PROMPT.format(prayer_name=prayer_ar)
         messages = [
             {"role": "system", "content": prompt},
@@ -167,10 +175,13 @@ class AIEngine:
         
         return self._call_groq(messages, temperature=0.9, max_tokens=150)
     
-    async def generate_rebuke(self, prayer_name: str, context: str = "") -> str:
-        """Generate gentle rebuke for missing prayer"""
+    async def generate_rebuke(self, prayer_name: str) -> str:
+        """Generate a rebuke for missing a prayer"""
         prayer_ar = PRAYER_NAMES_AR.get(prayer_name, prayer_name)
-        
+        if prayer_name == "Fajr" and datetime.now().hour >= 7:
+            prayer_ar = "الصبح"
+            
+        context = ""
         prompt = REBUKE_PROMPT.format(prayer_name=prayer_ar, context=context)
         messages = [
             {"role": "system", "content": prompt},
