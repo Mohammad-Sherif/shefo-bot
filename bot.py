@@ -329,4 +329,12 @@ def main():
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
-    main()
+    while True:
+        try:
+            main()
+            break  # Exit loop if main() finishes normally (Ctrl+C)
+        except Exception as e:
+            print(f"\n⚠️ خطأ في الاتصال أثناء التشغيل: {e}")
+            print("جاري إعادة المحاولة بعد 5 ثواني...\n")
+            import time
+            time.sleep(5)
