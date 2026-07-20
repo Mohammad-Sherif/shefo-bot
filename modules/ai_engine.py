@@ -43,22 +43,40 @@ class AIEngine:
             # Post-process: fix Fajr/Sobh naming based on time of day
             text = self._post_process_fajr_sobh(text)
             
+            # Post-process: strip any stray English words
+            text = self._strip_english(text)
+            
             return text
         except Exception as e:
             logger.error(f"Groq API error: {e}")
             return "عذراً، حدث خطأ. حاول مرة أخرى 🙏"
     
     def _post_process_fajr_sobh(self, text: str) -> str:
-        """After 7 AM, forcefully replace ALL mentions of 'الفجر' with 'الصبح'.
-        This is a code-level guarantee that the AI model cannot say 'الفجر' 
-        after sunrise, regardless of what the prompt says."""
+        """After 7 AM, forcefully replace ALL mentions of 'الفجر' with 'الصبح'."""
         now = datetime.now()
-        if now.hour >= 7 and now.hour < 13:  # 7 AM to 1 PM
+        if now.hour >= 7 and now.hour < 13:
             text = text.replace("صلاة الفجر", "صلاة الصبح")
             text = text.replace("صلّ الفجر", "صلّ الصبح")
             text = text.replace("صلي الفجر", "صلي الصبح")
             text = text.replace("صلِّ الفجر", "صلِّ الصبح")
             text = text.replace("الفجر", "الصبح")
+        return text
+    
+    def _strip_english(self, text: str) -> str:
+        """Remove any stray English words from the response.
+        Keeps: Arabic, numbers, emoji, punctuation, ACTION tags."""
+        import re
+        # Remove English words (2+ consecutive latin letters) but keep ACTION tags
+        def replace_english(match):
+            word = match.group(0)
+            # Keep ACTION tags
+            if word.startswith('[ACTION') or word.startswith('ACTION'):
+                return word
+            return ''
+        
+        text = re.sub(r'\b[a-zA-Z]{2,}\b', replace_english, text)
+        # Clean up double spaces left behind
+        text = re.sub(r'  +', ' ', text).strip()
         return text
     
     def _build_system_prompt(self) -> str:
