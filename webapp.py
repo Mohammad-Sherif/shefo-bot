@@ -381,43 +381,50 @@ def _handle_command(text: str, chat_id: int) -> str:
 
 
 def _handle_text(text: str) -> str:
-    """Handle regular text messages."""
-    intent = detect_intent(text)
-    logger.info(f"Message: '{text[:50]}' | Intent: {intent}")
+    """Handle ALL text messages — the AI decides everything."""
+    logger.info(f"Message: '{text[:50]}'")
 
-    if intent == 'prayed':
-        return run_async(handle_prayed())
+    # Send everything to the AI — it has full context and will decide
+    response = run_async(ai_engine.chat(text))
 
-    elif intent == 'food_log':
-        return run_async(fitness_manager.process_food_log(text))
+    # Parse and execute any [ACTION:XXX] tags the AI included
+    response = _execute_actions(response, text)
 
-    elif intent == 'today_plan':
-        return run_async(fitness_manager.get_workout_recommendation())
+    return response
 
-    elif intent == 'random_workout':
-        wk = run_async(fitness_manager.get_random_workout())
-        return f"🎲 يلا! جبتلك تمرين عشوائي:\n\n{wk}"
 
-    elif intent == 'workout_done':
-        return fitness_manager.mark_workout_complete()
+def _execute_actions(response: str, original_text: str) -> str:
+    """Parse [ACTION:XXX] tags from AI response, execute DB actions, return clean text."""
+    clean = response
 
-    elif intent == 'modify_plan':
-        return run_async(fitness_manager.modify_plan(text))
-
-    elif intent == 'prayer_status':
-        return get_prayer_status_text()
-
-    elif intent == 'morning':
+    if '[ACTION:PRAYED]' in clean:
+        clean = clean.replace('[ACTION:PRAYED]', '').strip()
         today_str = date.today().isoformat()
-        fajr_st = db.get_prayer_status(today_str, 'Fajr')
-        prayed_fajr = bool(fajr_st and fajr_st.get('prayed'))
-        plan = format_plan_for_ai(datetime.now().strftime('%A'))
-        return run_async(ai_engine.generate_morning_greeting(
-            prayed_fajr=prayed_fajr, today_plan=plan
-        ))
+        prayer_name = get_most_recent_prayer()
+        if prayer_name:
+            db.mark_prayed(today_str, prayer_name)
+            # Add a dhikr after the AI's response
+            used_ids = db.get_used_adhkar_today(today_str)
+            dhikr = get_random_dhikr(used_ids)
+            if dhikr:
+                db.log_dhikr(today_str, prayer_name, dhikr['id'], dhikr['text'])
+                clean += f"\n\n💎 {dhikr['text']}\n📖 {dhikr['source']}"
 
-    else:  # general / goodnight
-        return run_async(ai_engine.chat(text))
+    if '[ACTION:WORKOUT_DONE]' in clean:
+        clean = clean.replace('[ACTION:WORKOUT_DONE]', '').strip()
+        fitness_manager.mark_workout_complete()
+
+    if '[ACTION:RANDOM_WORKOUT]' in clean:
+        clean = clean.replace('[ACTION:RANDOM_WORKOUT]', '').strip()
+        wk = run_async(fitness_manager.get_random_workout())
+        clean += f"\n\n{wk}"
+
+    if '[ACTION:FOOD]' in clean:
+        clean = clean.replace('[ACTION:FOOD]', '').strip()
+        today_str = date.today().isoformat()
+        db.log_meal(today_str, 'logged', original_text, 0, 0)
+
+    return clean
 
 
 # ============================================================
