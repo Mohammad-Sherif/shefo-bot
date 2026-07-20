@@ -59,11 +59,19 @@ def run_async(coro):
 
 
 async def _send_telegram(chat_id, text):
-    """Send a message via Telegram Bot API."""
-    from telegram import Bot
-    bot = Bot(token=TELEGRAM_BOT_TOKEN)
-    async with bot:
-        await bot.send_message(chat_id=int(chat_id), text=text)
+    """Send a message via Telegram Bot API using requests to bypass httpx proxy issues."""
+    import requests
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text
+    }
+    try:
+        # Run sync requests in async wrapper just to not break existing signature
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: requests.post(url, json=payload, timeout=10))
+    except Exception as e:
+        logger.error(f"Requests failed to send message: {e}")
 
 
 def send_message(text):
