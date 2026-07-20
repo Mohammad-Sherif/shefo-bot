@@ -1,6 +1,7 @@
 import socketserver
 import http.server
 import threading
+import os
 
 class MyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -10,7 +11,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(b"Bot is alive!")
 
 def keep_alive():
-    PORT = 7860  # Hugging Face Spaces default port
+    PORT = int(os.environ.get('PORT', 8080))
     handler = MyHandler
     httpd = socketserver.TCPServer(("", PORT), handler)
     print(f"Keep-alive server running on port {PORT}")
