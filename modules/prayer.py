@@ -200,6 +200,14 @@ class PrayerManager:
         lines = ["🕌 حالة صلوات اليوم:\n"]
         for p in prayers:
             name_ar = PRAYER_NAMES_AR.get(p['prayer_name'], p['prayer_name'])
+            
+            # Change "الفجر" to "الصبح" if it's past 7 AM (approximate sunrise logic for display)
+            if p['prayer_name'] == "Fajr":
+                now = datetime.now()
+                # If current time is past 7 AM, call it الصبح
+                if now.hour >= 7:
+                    name_ar = "الصبح"
+                    
             status = "✅" if p['prayed'] else "❌"
             time_str = p.get('adhan_time', '')
             prayed_at = f" (صلّيت الساعة {p['prayed_at']})" if p.get('prayed_at') else ""
