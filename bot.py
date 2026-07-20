@@ -76,8 +76,8 @@ def detect_intent(text: str) -> str:
     text_lower = text.lower().strip()
     
     # Prayer responses
-    prayer_keywords = ['صليت', 'صلّيت', 'صلاة', 'اصلي', 'صلي', 'خلصت صلاة', 'تمام صليت']
-    if any(kw in text_lower for kw in prayer_keywords):
+    prayer_keywords = ['صليت', 'صلّيت', 'خلصت صلاة', 'الحمدلله صليت', 'تمت الصلاة', 'صليتها']
+    if any(kw in text_lower for kw in prayer_keywords) and 'هصلي' not in text_lower and 'هقوم' not in text_lower:
         return 'prayed'
     
     # Food logging
