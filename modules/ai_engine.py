@@ -40,10 +40,26 @@ class AIEngine:
                 import re
                 text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
             
+            # Post-process: fix Fajr/Sobh naming based on time of day
+            text = self._post_process_fajr_sobh(text)
+            
             return text
         except Exception as e:
             logger.error(f"Groq API error: {e}")
             return "عذراً، حدث خطأ. حاول مرة أخرى 🙏"
+    
+    def _post_process_fajr_sobh(self, text: str) -> str:
+        """After 7 AM, forcefully replace ALL mentions of 'الفجر' with 'الصبح'.
+        This is a code-level guarantee that the AI model cannot say 'الفجر' 
+        after sunrise, regardless of what the prompt says."""
+        now = datetime.now()
+        if now.hour >= 7 and now.hour < 13:  # 7 AM to 1 PM
+            text = text.replace("صلاة الفجر", "صلاة الصبح")
+            text = text.replace("صلّ الفجر", "صلّ الصبح")
+            text = text.replace("صلي الفجر", "صلي الصبح")
+            text = text.replace("صلِّ الفجر", "صلِّ الصبح")
+            text = text.replace("الفجر", "الصبح")
+        return text
     
     def _build_system_prompt(self) -> str:
         """Build the full system prompt with all context"""
