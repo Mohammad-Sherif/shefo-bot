@@ -86,7 +86,7 @@ def detect_intent(text: str) -> str:
         return 'food_log'
     
     # Ask for today's plan
-    plan_keywords = ['تمرين النهارده', 'تمرين اليوم', 'ايه النهارده', 'إيه النهارده', 'خطة اليوم', 'ايه اليوم']
+    plan_keywords = ['تمرين النهارده', 'تمرين اليوم', 'ايه النهارده', 'إيه النهارده', 'خطة اليوم', 'ايه اليوم', 'تمرينت اليوم', 'تمرينتك']
     if any(kw in text_lower for kw in plan_keywords):
         return 'today_plan'
     

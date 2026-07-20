@@ -53,6 +53,19 @@ class AIEngine:
         # Today's training plan
         training_context = format_plan_for_ai(day_name)
         
+        # Add random workout if generated today
+        today_str = date.today().isoformat()
+        today_workout = self.db.get_today_workout(today_str)
+        if today_workout and today_workout.get('random_workout'):
+            try:
+                import json
+                workout_data = json.loads(today_workout['details'])
+                from data.workouts import format_workout_ar
+                random_text = format_workout_ar(workout_data)
+                training_context += f"\n\n🚨 ملاحظة هامة: محمد طلب تمرينة عشوائية اليوم وهي:\n{random_text}\n(إذا سأل عن تمارينه اليوم، أخبره بهذه التمرينة العشوائية بدلاً من الخطة الأساسية)"
+            except Exception as e:
+                logger.error(f"Failed to load random workout for AI context: {e}")
+        
         # Food context
         food_context = format_food_db_for_ai()
         meal_plan = format_meal_plan_for_ai()
