@@ -337,4 +337,7 @@ if __name__ == '__main__':
             print(f"\n⚠️ خطأ في الاتصال أثناء التشغيل: {e}")
             print("جاري إعادة المحاولة بعد 5 ثواني...\n")
             import time
+            import asyncio
             time.sleep(5)
+            # Create a fresh event loop for the next attempt because the previous one was closed
+            asyncio.set_event_loop(asyncio.new_event_loop())
