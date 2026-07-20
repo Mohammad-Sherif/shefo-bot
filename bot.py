@@ -310,9 +310,12 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Start keep_alive server for free hosting
-    from keep_alive import keep_alive
-    keep_alive()
-    
+    try:
+        from keep_alive import keep_alive
+        keep_alive()
+    except Exception as e:
+        print(f"⚠️ Could not start keep_alive server (normal on some platforms like PythonAnywhere): {e}")
+        
     # Run
     print("\n✅ البوت شغّال! ابعت /start على تليجرام")
     print("Press Ctrl+C to stop\n")
