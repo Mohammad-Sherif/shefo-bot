@@ -86,13 +86,25 @@ def detect_intent(text: str) -> str:
     """Detect user intent from message text."""
     text_lower = text.lower().strip()
 
-    # Prayer responses
+    # Check if this is a QUESTION (not a statement)
+    is_question = (
+        '?' in text_lower or '؟' in text_lower
+        or text_lower.startswith('هل ')
+        or text_lower.startswith('هو انا')
+        or text_lower.startswith('هو أنا')
+        or 'ولا لا' in text_lower
+        or 'انا صليت' in text_lower and ('?' in text_lower or '؟' in text_lower or 'هو' in text_lower)
+    )
+
+    # Prayer responses — only if it's a STATEMENT, not a question
     prayer_kw = [
         'صليت', 'صلّيت', 'خلصت صلاة', 'الحمدلله صليت',
         'تمت الصلاة', 'صليتها', 'صليت الصبح', 'صلّيت الصبح'
     ]
-    if any(kw in text_lower for kw in prayer_kw) \
-       and 'هصلي' not in text_lower and 'هقوم' not in text_lower:
+    if not is_question \
+       and any(kw in text_lower for kw in prayer_kw) \
+       and 'هصلي' not in text_lower and 'هقوم' not in text_lower \
+       and 'اصلي' not in text_lower:
         return 'prayed'
 
     # Food
